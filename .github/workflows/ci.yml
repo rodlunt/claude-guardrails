@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell syntax
+        run: |
+          for f in bin/*.sh tests/*.sh; do
+            bash -n "$f" || exit 1
+            echo "syntax OK: $f"
+          done
+
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning bin/*.sh tests/*.sh
+
+      - name: Settings policy is valid JSON and declares keys
+        run: |
+          jq empty claude-core/settings-policy.json
+          test "$(jq 'del(._comment) | length' claude-core/settings-policy.json)" -gt 0 \
+            || { echo "policy declares no keys"; exit 1; }
+          echo "policy OK"
+
+      - name: Guard test suite
+        run: tests/test-guard-git-push.sh
+
+      - name: The guard must be executable, or the hook silently never runs
+        run: |
+          test -x bin/guard-git-push.sh || { echo "bin/guard-git-push.sh is not executable"; exit 1; }
+          echo "exec bit OK"

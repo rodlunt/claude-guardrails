@@ -1,0 +1,23 @@
+# Claude Code rewrites ~/.claude/settings.json at runtime (via /config, plugin
+# toggles, etc.), so it must stay a machine-local real file, not a symlink into
+# this repo. That much has always been true. What changed on 2026-07-21 is that
+# no settings.json is tracked here any more.
+#
+# A full copy used to be kept as a "shared baseline/reference" for humans to
+# consult on a new machine. It rotted silently: by the time anyone looked, it was
+# missing the load-bearing `attribution` block (so a machine seeded from it would
+# have quietly re-added Co-Authored-By trailers, breaching working-style.md)
+# while still enabling 15 plugins that had long since been uninstalled. A file a
+# human is meant to copy by hand is not a mechanism; nothing was watching it.
+#
+# The replacement is claude-core/settings-policy.json: policy keys only, merged
+# into each machine's live settings.json by bin/apply-settings.sh, and drift
+# checked by bin/check-setup.sh so the next rot is loud instead of silent.
+#
+# settings-policy.json is ignored below because files sitting directly inside a
+# stow package land in $HOME itself. Without that line it would be symlinked to
+# ~/settings-policy.json, which is not where the script looks for it.
+#
+# Machine-local overrides still belong in the gitignored settings.local.json.
+settings\.json$
+settings-policy\.json$

@@ -1,0 +1,84 @@
+{
+  "_comment": [
+    "POLICY keys for ~/.claude/settings.json. Applied by bin/apply-settings.sh.",
+    "",
+    "This file is NOT a full copy of settings.json. It holds only the settings that",
+    "must be identical on EVERY machine because an instruction file depends on them",
+    "being enforced by the harness rather than by Claude remembering to comply.",
+    "",
+    "Everything else in settings.json is legitimately per-machine (installed plugins,",
+    "model, theme, marketplaces) and Claude Code rewrites it at runtime, which is why",
+    "settings.json is deliberately NOT stowed. See claude-core/.stow-local-ignore.",
+    "",
+    "Adding a key here: only if a rule in claude-core/.claude/instructions/ says the",
+    "setting enforces that rule. If it is a preference, it does not belong here.",
+    "",
+    "Merge semantics: objects merge recursively, arrays are UNIONed (policy entries",
+    "are guaranteed present, a machine's own additions survive), and this file wins",
+    "for any scalar it names.",
+    "",
+    "attribution -> working-style.md, 'No Claude attribution'.",
+    "permissions.deny npm/npx -> security.md, 'Never use npm' (supply-chain worm",
+    "risk). pnpm and `pnpm dlx` are the sanctioned replacements and are NOT blocked.",
+    "Bare and colon-wildcard forms are both listed because a prefix rule like",
+    "`Bash(npm:*)` does not match an argument-less `npm`.",
+    "",
+    "hooks.PreToolUse -> working-style.md, 'Never git push origin HEAD, and never",
+    "a bare git push. Name the branch.' That rule was an instruction telling Claude",
+    "to re-check the branch before pushing, i.e. a control that depends on Claude",
+    "remembering, and it failed exactly as written on 2026-08-14: two sessions",
+    "shared one checkout, one switched branches, and the other's",
+    "main-bound commit landed on that feature branch via `git push origin HEAD`.",
+    "Same failure recorded 2026-07-10. Claude Code does NOT detect two interactive",
+    "sessions sharing a checkout (verified against the docs 2026-08-14; only",
+    "BACKGROUND sessions get an automatic worktree), so nothing upstream catches",
+    "this. guard-git-push.sh is the mechanism that replaces the instruction.",
+    "It matches the WHOLE command rather than using the hook's `if` key, because",
+    "permission rules anchor at the start of the command and the incident began",
+    "with `git add`, so `if: Bash(git push *)` would never have fired.",
+    "",
+    "hooks.SessionStart -> the policy re-applies itself. Without this, keeping N",
+    "machines compliant depends on someone remembering to run this script on each",
+    "one, which is the same human-memory dependency that let the old baseline rot.",
+    "Chicken-and-egg, stated plainly: the hook cannot install itself, so a NEW",
+    "machine still needs one manual `apply-settings.sh` (step 4 of the README's",
+    "new-machine list). After that first run the machine is self-correcting."
+  ],
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "deny": [
+      "Bash(npm)",
+      "Bash(npm:*)",
+      "Bash(npx)",
+      "Bash(npx:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/claude-guardrails/bin/guard-git-push.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/claude-guardrails/bin/apply-settings.sh\" --heal",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

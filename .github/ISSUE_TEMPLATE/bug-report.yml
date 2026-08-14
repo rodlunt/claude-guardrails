@@ -1,0 +1,38 @@
+name: Bug report
+description: Something here does not do what it says it does
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A guard that fails silently is the thing this repo exists to prevent, so
+        "it did not fire" is a very welcome bug report.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, and what it did.
+      placeholder: |
+        I ran: git push origin HEAD
+        I expected: the guard to refuse it
+        Instead: the push went through
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, bash version, jq version, and Claude Code version if relevant.
+      placeholder: |
+        OS: Ubuntu 24.04
+        bash --version: 5.2.21
+        jq --version: jq-1.7
+        claude --version: 2.1.232
+    validations:
+      required: true
+  - type: textarea
+    id: hook
+    attributes:
+      label: Hook output, if any
+      description: Anything the hook printed, including a "NOT ENFORCED" warning.
+      render: text
