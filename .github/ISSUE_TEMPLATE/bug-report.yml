@@ -1,6 +1,7 @@
 name: Bug report
 description: Something here does not do what it says it does
 labels: ["bug"]
+assignees: ["rodlunt"]
 body:
   - type: markdown
     attributes:
