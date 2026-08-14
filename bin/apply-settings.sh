@@ -129,7 +129,37 @@ def deepmerge(a; b):
     (($a + $b) | unique)
   else $b
   end;
-deepmerge(.[0]; .[1])
+
+# Union alone cannot RETIRE a superseded entry, and that bit on 2026-08-14.
+# Adding a second hook to a policy event left the OLD single-hook matcher entry
+# beside the new two-hook one: to the union, a stale policy entry is
+# indistinguishable from a machine\047s own addition, which union deliberately
+# preserves. The result ran guard-git-push.sh TWICE on every Bash call and
+# apply-settings.sh --heal TWICE on every session start, while --check still
+# reported "in sync", because every policy entry genuinely WAS present. A drift
+# check that cannot see a duplicate it created is the same shape of bug as a
+# monitor that cannot see the host it is meant to watch.
+#
+# So after merging, entries within each hooks.<Event> that share a matcher are
+# collapsed into one, unioning their hook lists. Entries with DIFFERENT matchers
+# are never merged. Order is preserved by walking and appending rather than
+# using `unique`, which sorts and would scramble hook execution order.
+# Scoped to .hooks only: permissions.deny and friends keep plain union semantics.
+def merge_hook_entries:
+  reduce .[] as $e ([];
+    (map(.matcher) | index($e.matcher)) as $i
+    | if $i == null then . + [$e]
+      else .[$i].hooks = (reduce ($e.hooks // [])[] as $h (.[$i].hooks // [];
+             if any(.[]; . == $h) then . else . + [$h] end))
+      end);
+
+def collapse_hooks:
+  if (.hooks? | type) == "object" then
+    .hooks |= with_entries(
+      if (.value | type) == "array" then .value |= merge_hook_entries else . end)
+  else . end;
+
+deepmerge(.[0]; .[1]) | collapse_hooks
 '
 MERGED="$(jq -s "${MERGE_PROGRAM}" "${TARGET_FILE}" <(printf '%s' "${POLICY_EFFECTIVE}"))" \
   || fail_cannot_run "merge failed"
