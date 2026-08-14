@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # This repo ships no package manifests, so github-actions is the only
+  # ecosystem with anything to update. Dependabot ALERTS and security PRs are
+  # enabled separately in repo settings and only fire on a known vulnerability;
+  # this is what keeps a pinned action current in the absence of a CVE.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    assignees:
+      - "rodlunt"
+    commit-message:
+      prefix: "ci"
