@@ -34,10 +34,14 @@ jobs:
             || { echo "policy declares no keys"; exit 1; }
           echo "policy OK"
 
-      - name: Guard test suite
-        run: tests/test-guard-git-push.sh
-
-      - name: The guard must be executable, or the hook silently never runs
+      - name: Guard test suites
         run: |
-          test -x bin/guard-git-push.sh || { echo "bin/guard-git-push.sh is not executable"; exit 1; }
-          echo "exec bit OK"
+          tests/test-guard-git-push.sh
+          tests/test-guard-repo-collision.sh
+
+      - name: Guards must be executable, or the hooks silently never run
+        run: |
+          for f in bin/guard-git-push.sh bin/guard-repo-collision.sh; do
+            test -x "$f" || { echo "$f is not executable"; exit 1; }
+            echo "exec bit OK: $f"
+          done
