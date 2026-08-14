@@ -19,6 +19,11 @@ before you push*. Two Claude sessions shared one checkout, one switched branches
 the other's tool calls, and a main-bound commit landed on the wrong branch. The instruction
 failed exactly as written. So it was replaced with a hook that cannot forget.
 
+The story behind it, and why an instruction that failed twice became a hook:
+**[The rule that failed exactly as written](https://rod.lunt.au/notes/the-rule-that-failed-exactly-as-written/)**.
+That essay is the easy read; this README is the reference. They are meant to
+overlap, so if you change one, check the other still agrees.
+
 **[Save me the chit chat: show me how to install it →](#install)**
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/guard-dark.png"><img alt="Terminal: git push origin HEAD is refused by guard-git-push, which explains that the command pushes whatever branch is checked out at that instant and suggests naming the branch instead" src="docs/images/guard-light.png"></picture>
