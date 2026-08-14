@@ -64,8 +64,10 @@ If `CURRENT` is NOT the default branch, ask the user before committing: the bato
 When committing, stage only `nextsession.md`:
 
 ```bash
-cd "$(git rev-parse --show-toplevel)" && git add nextsession.md && git commit -m "chore(session-end): update handoff baton for $(date +%Y-%m-%d) session" && git push origin HEAD
+cd "$(git rev-parse --show-toplevel)" && git add nextsession.md && git commit -m "chore(session-end): update handoff baton for $(date +%Y-%m-%d) session" && B=$(git branch --show-current) && git push origin "$B"
 ```
+
+The branch is read in the SAME command that pushes, deliberately. Never `git push origin HEAD` or a bare `git push` here: both push whatever is checked out at the instant they run, and on a checkout shared with another session the tree can switch between two tool calls. `bin/guard-git-push.sh` in this repository denies both forms, so the older wording could not complete this step on a machine with the hook installed.
 
 If the push is rejected (upstream moved), run `git pull --rebase` then retry. Never force-push.
 
