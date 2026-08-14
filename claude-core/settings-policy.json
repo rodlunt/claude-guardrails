@@ -37,6 +37,12 @@
     "permission rules anchor at the start of the command and the incident began",
     "with `git add`, so `if: Bash(git push *)` would never have fired.",
     "",
+    "The SECOND PreToolUse hook, guard-repo-collision.sh, supplies the FACT the",
+    "push guard cannot: that another session is in this checkout with you. It",
+    "warns once per session per repo, on git verbs that WRITE only, and never",
+    "blocks. It cannot call SendMessage itself (hooks are shell commands), so it",
+    "tells the model to.",
+    "",
     "hooks.SessionStart -> the policy re-applies itself. Without this, keeping N",
     "machines compliant depends on someone remembering to run this script on each",
     "one, which is the same human-memory dependency that let the old baseline rot.",
@@ -64,6 +70,11 @@
           {
             "type": "command",
             "command": "bash \"$HOME/claude-guardrails/bin/guard-git-push.sh\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"$HOME/claude-guardrails/bin/guard-repo-collision.sh\"",
             "timeout": 10
           }
         ]

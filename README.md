@@ -5,7 +5,7 @@
 ![Licence](https://img.shields.io/github/license/rodlunt/claude-guardrails)
 ![Bash](https://img.shields.io/badge/bash-5%2B-4eaa25)
 ![Checked with shellcheck](https://img.shields.io/badge/checked%20with-shellcheck-89e051)
-![Tests](https://img.shields.io/badge/guard%20tests-25-1a7f37)
+![Tests](https://img.shields.io/badge/guard%20tests-52-1a7f37)
 
 **TL;DR:** an instruction telling an AI coding assistant "always check X before doing Y"
 is not a control. It is a hope. This repository is the part of one person's Claude Code
@@ -28,12 +28,13 @@ failed exactly as written. So it was replaced with a hook that cannot forget.
 | Piece | What it does |
 |---|---|
 | `bin/guard-git-push.sh` | `PreToolUse` hook. Refuses a `git push` that does not name its branch. |
+| `bin/guard-repo-collision.sh` | `PreToolUse` hook. Warns, once per session, when another Claude session is running in the same checkout. |
 | `bin/apply-settings.sh` | Merges a policy into `~/.claude/settings.json`, reports drift per key, and reapplies itself from a `SessionStart` hook. |
 | `bin/check-setup.sh` | Machine-level preflight: stow links resolve, settings policy in force, commit identity not leaking a personal address. |
 | `claude-core/.claude/instructions/` | The rules themselves: five laws, twelve anti-silent-failure rules with their case studies, working style, session discipline, security. |
 | `claude-commands/.claude/commands/` | Slash commands: `/session-end`, `/next-session`, `/nextlite`, `/new-repo`, `/setup-issues`. |
 | `claude-coding/.claude/skills/` | Skills for general coding work. |
-| `tests/` | 25 cases for the guard, classified against the real hook contract. |
+| `tests/` | 52 cases across both guards, classified against the real hook contract. |
 
 ## The idea
 
@@ -89,7 +90,7 @@ add this to your own `settings.json`:
 }
 ```
 
-## The guard
+## The push guard
 
 It denies a push that does not name the branch it is pushing:
 
@@ -125,6 +126,45 @@ The last two lines of that run are the ones that matter. The guard is checked fo
 **open** when `jq` is missing, and then a control proves the same input is still denied
 when `jq` is present. Without the control, "it allowed the push" would also be true of a
 guard that allows everything.
+
+## The collision guard
+
+The push guard blocks the one command whose damage is hard to undo. It cannot tell you the
+fact underneath: that somebody else is in the checkout with you. That is what
+`bin/guard-repo-collision.sh` is for.
+
+It fires only on git verbs that **write** (`commit`, `merge`, `rebase`, `push`, `checkout`,
+`switch`, `reset`, `cherry-pick`, `stash`), warns **once per session per repository**, and
+**never blocks**:
+
+```text
+guard-repo-collision: another Claude Code session is running in this same checkout.
+
+  repo:   /home/you/Projects/thing
+  branch: main (right now, and it can change under you)
+  peers:  pid 237453
+
+The branch can change between two of your tool calls. Do not read it once and rely on it later.
+  - Name branches explicitly: `git push origin <branch>`, never HEAD or a bare push.
+  - Re-read the branch in the SAME command that uses it.
+  - Consider ListAgents and SendMessage to tell the peer what you are about to do.
+  - If you are about to do sustained work, relaunching under --worktree avoids this entirely.
+```
+
+Three deliberate decisions:
+
+- **`PreToolUse`, not `SessionStart`.** A start-up check only sees peers that already exist.
+  The second collision that prompted this happened when a peer branched *after* the session
+  had started, which a start-up warning would have missed entirely.
+- **Warns, does not block.** The push guard already refuses the dangerous form. Blocking
+  every git command whenever a colleague is in the same repo would be unusable, and a
+  warning on `git status` is a warning you stop reading.
+- **It cannot call `SendMessage` itself.** Hooks are shell commands; `SendMessage` is a tool
+  available to the model. So the hook supplies the fact and tells the model to use it.
+
+Its test suite states its own gap rather than hiding it: the peer-present path needs a
+second real Claude session in the same checkout, which CI cannot spawn, so that path is
+verified by hand and the expected output is printed in the suite for comparison.
 
 ## The settings policy
 
@@ -193,13 +233,14 @@ instruction:
 
 ```sh
 tests/test-guard-git-push.sh                      # 25 cases
+tests/test-guard-repo-collision.sh                # 27 cases
 shellcheck -S warning bin/*.sh tests/*.sh
 jq empty claude-core/settings-policy.json
 ```
 
-CI runs all of the above, plus a check that `bin/guard-git-push.sh` is still executable,
-because a hook whose script has lost its exec bit fails in exactly the quiet way this
-repository is about.
+CI runs all of the above, plus a check that both guards are still executable, because a
+hook whose script has lost its exec bit fails in exactly the quiet way this repository is
+about.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The bar for a new guard is that it can tell
 "passed" from "could not run".
