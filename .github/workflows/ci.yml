@@ -38,10 +38,16 @@ jobs:
         run: |
           tests/test-guard-git-push.sh
           tests/test-guard-repo-collision.sh
+          tests/test-peer-ack.sh
+
+      - name: Python syntax (MCP server)
+        run: |
+          python3 -m py_compile mcp/peer-ack/server.py
+          echo "python syntax OK: mcp/peer-ack/server.py"
 
       - name: Guards must be executable, or the hooks silently never run
         run: |
-          for f in bin/guard-git-push.sh bin/guard-repo-collision.sh; do
+          for f in bin/guard-git-push.sh bin/guard-repo-collision.sh bin/peer-ack.sh bin/peer-ack-hook.sh; do
             test -x "$f" || { echo "$f is not executable"; exit 1; }
             echo "exec bit OK: $f"
           done

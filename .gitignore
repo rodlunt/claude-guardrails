@@ -20,3 +20,7 @@ settings.local.json
 Thumbs.db
 *.swp
 *~
+
+# Python bytecode, e.g. from `python3 -m py_compile` in CI or a local test run
+__pycache__/
+*.py[cod]
