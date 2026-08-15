@@ -80,6 +80,30 @@ out="$("${LEDGER}" pending 2>&1)"
 case "${out}" in *STALE*) no "a fresh entry was marked STALE (over-detection)" ;;
   *) ok "a fresh entry is not marked STALE" ;; esac
 
+# --- two entries in the SAME SECOND -----------------------------------------
+# `pending` used to crash here: rows.sort() compares (age, dict) tuples, so equal
+# ages fell through to comparing dicts and raised TypeError. Every other case in
+# this file creates one entry at a time, which is why it shipped. Note the
+# timestamps are forced rather than raced: recording twice in a row usually
+# straddles a second boundary and the bug hides.
+new_state
+mkdir -p "${STATE_DIR}/peer-ack/pending"
+EPOCH="$(date +%s)"
+for n in tie-a tie-b; do
+  printf '{"nonce":"%s","to":"peer","summary":"same second","sent_at":"x","sent_epoch":%s,"session":""}' \
+    "${n}" "${EPOCH}" > "${STATE_DIR}/peer-ack/pending/${n}.json"
+done
+out="$("${LEDGER}" pending 2>&1)"
+case "${out}" in *Traceback*|*TypeError*) no "pending crashes when two entries share a timestamp" ;;
+  *) ok "pending survives two entries sharing a timestamp" ;; esac
+case "${out}" in *tie-a*) ok "the first of two same-second entries is listed" ;;
+  *) no "same-second entry tie-a missing" ;; esac
+case "${out}" in *tie-b*) ok "the second of two same-second entries is listed" ;;
+  *) no "same-second entry tie-b missing" ;; esac
+drop_state
+new_state
+"${LEDGER}" record case-1 peer-b "a message that matters" >/dev/null 2>&1
+
 # --- ledger: refusing input that could escape the directory -----------------
 "${LEDGER}" record "../escape" peer-b >/dev/null 2>&1
 [ $? -eq 1 ] && ok "a path-escaping nonce is refused" || no "path-escaping nonce accepted"

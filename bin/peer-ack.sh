@@ -107,7 +107,7 @@ cmd_pending() {
     exit 2
   fi
   python3 - "$STALE_SECONDS" "$quiet" "${files[@]}" <<'PY'
-import json,sys,time
+import json,os,sys,time
 stale=int(sys.argv[1]); quiet=sys.argv[2]=="--quiet"; files=sys.argv[3:]
 now=int(time.time()); rows=[]
 for f in files:
@@ -115,13 +115,26 @@ for f in files:
     except Exception: continue
     age=now-int(d.get("sent_epoch",now))
     rows.append((age,d))
-rows.sort(reverse=True)
+# Sort on the age ONLY. `rows.sort()` compares the whole tuple, so two entries
+# recorded in the SAME SECOND fall through to comparing the dicts and raise
+# TypeError, taking `pending` down entirely. That shipped, and the selftest
+# never caught it because it only ever created one entry at a time. Two
+# messages a second apart is not an edge case, it is a normal exchange.
+rows.sort(key=lambda r: r[0], reverse=True)
 if not quiet:
     print(f"peer-ack: {len(rows)} message(s) awaiting acknowledgement")
 for age,d in rows:
     mark = "STALE" if age>=stale else "waiting"
     mins = age//60
-    print(f"  [{mark}] {d['nonce']}  to={d.get('to','?')}  {mins}m ago  {d.get('summary','')}"[:200])
+    # The ledger is shared by every session on this machine, so ownership is not
+    # cosmetic: without it you cannot tell your own outstanding messages from a
+    # peer's, and "unknown" is shown rather than guessed.
+    sid = d.get("session") or ""
+    me = os.environ.get("CLAUDE_SESSION_ID","")
+    if not sid: owner = "session?"
+    elif me and sid == me: owner = "yours"
+    else: owner = "sess:" + sid[:8]
+    print(f"  [{mark}] {d['nonce']}  to={d.get('to','?')}  {mins}m ago  ({owner})  {d.get('summary','')}"[:220])
 if not quiet and any(a>=stale for a,_ in rows):
     print("  A STALE entry has had no ack. Treat it as UNDELIVERED, not delivered.")
 PY
@@ -181,6 +194,18 @@ cmd_selftest() {
   case "$out" in *ctrl-1*) echo "FAIL: acked nonce still pending"; rc=1;; esac
 
   "$self" record ../escape peer-x 2>/dev/null && { echo "FAIL: path-escaping nonce accepted"; rc=1; }
+
+  # TWO entries in the same second. `pending` used to crash here (tuple compare
+  # falling through to dicts) and every earlier test created one entry at a time,
+  # so the suite never saw it. Assert on output, since a traceback still exits 0
+  # through a pipe.
+  "$self" record same-sec-a peer-x "first" >/dev/null
+  "$self" record same-sec-b peer-x "second" >/dev/null
+  out="$("$self" pending 2>&1)"
+  case "$out" in *Traceback*|*TypeError*) echo "FAIL: pending crashed with two entries"; rc=1;; esac
+  case "$out" in *same-sec-a*) ;; *) echo "FAIL: pending lost an entry when two exist"; rc=1;; esac
+  case "$out" in *same-sec-b*) ;; *) echo "FAIL: pending lost an entry when two exist"; rc=1;; esac
+  "$self" ack same-sec-a >/dev/null; "$self" ack same-sec-b >/dev/null
 
   grep -q '"outcome": "acked"' "$tmp/peer-ack/resolved.jsonl" 2>/dev/null \
     || { echo "FAIL: resolved.jsonl missing the acked record"; rc=1; }
