@@ -89,6 +89,51 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "_comment": [
+          "Companion to the UserPromptSubmit entry; read its _comment for the rationale and",
+          "for why the wrapper shape is mandatory. SessionStart surfaces anything left",
+          "unacknowledged from a previous session."
+        ],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"$HOME/claude-guardrails/bin/peer-ack-hook.sh\"; [ -x \"$s\" ] && bash \"$s\"; exit 0",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "_comment": [
+          "peer-ack-hook.sh enforces nothing. It makes an UNANSWERED cross-session message",
+          "visible. Claude Code's SendMessage returns success when a message is QUEUED, not",
+          "when a peer receives it: a message can sit awaiting approval at the receiving",
+          "terminal, expire unread, and leave the sender believing it was delivered.",
+          "'Remember which messages are unacknowledged' is a hope, so this is a mechanism.",
+          "",
+          "APPEND-ONLY, do not reorder: apply-settings.sh unions these arrays and collapses",
+          "entries sharing a matcher, and execution order within an entry is positional.",
+          "",
+          "The wrapper shape is NOT optional. On UserPromptSubmit both blocking channels",
+          "(exit 2 and decision:'block') ERASE the user's prompt outright, and a bash SYNTAX",
+          "ERROR exits 2 without executing a single line, so no care inside the script",
+          "protects against a bad edit TO it. The trailing 'exit 0' is the only thing that",
+          "holds when the file cannot run at all. Covered by tests/test-peer-ack.sh, which",
+          "proves both that a broken hook exits 2 and that this wrapper converts it to 0.",
+          "",
+          "Per-machine off switch, outside anything this policy can re-add:",
+          "  touch \"${XDG_STATE_HOME:-$HOME/.local/state}/peer-ack/off\""
+        ],
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"$HOME/claude-guardrails/bin/peer-ack-hook.sh\"; [ -x \"$s\" ] && bash \"$s\"; exit 0",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }
