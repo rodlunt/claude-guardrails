@@ -5,7 +5,7 @@
 ![Licence](https://img.shields.io/github/license/rodlunt/claude-guardrails)
 ![Bash](https://img.shields.io/badge/bash-5%2B-4eaa25)
 ![Checked with shellcheck](https://img.shields.io/badge/checked%20with-shellcheck-89e051)
-![Tests](https://img.shields.io/badge/guard%20tests-79-1a7f37)
+![Tests](https://img.shields.io/badge/guard%20tests-82-1a7f37)
 
 **TL;DR:** an instruction telling an AI coding assistant "always check X before doing Y"
 is not a control. It is a hope. This repository is the part of one person's Claude Code
@@ -39,7 +39,7 @@ overlap, so if you change one, check the other still agrees.
 | `claude-core/.claude/instructions/` | The rules themselves: five laws, twelve anti-silent-failure rules with their case studies, working style, session discipline, security. |
 | `claude-commands/.claude/commands/` | Slash commands: `/session-end`, `/next-session`, `/nextlite`, `/new-repo`, `/setup-issues`. |
 | `claude-coding/.claude/skills/` | Skills for general coding work. |
-| `tests/` | 79 cases across all three guards, classified against the real hook contract. |
+| `tests/` | 82 cases across all three guards, classified against the real hook contract. |
 
 ## The idea
 
