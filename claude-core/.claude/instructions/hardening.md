@@ -16,6 +16,8 @@ outage that earned it lives in `hardening/cases.md`.
 | conclude "nothing found" from a command's empty output | rule 12's case, and fire a control first |
 | claim something is running because its unit reports `active` | rule 7's case |
 | decide what a check should do when its own machinery fails | rule 1's case |
+| treat a passing test or selftest as evidence the thing works | rule 13's case |
+| trust a guard on a repo, path or branch another session can move | rule 14's case |
 
 A one-line rule is easier to misapply than one carrying its outage. **Recalling a rule is fine
 from this page; acting on one means opening the case.** That is the trade this split makes, and
@@ -47,16 +49,32 @@ it only works if you honour it.
     place, used everywhere.
 12. **Never pre-write the verdict.** Print the data; interpret in a separate step. If **absence**
     is the finding, first fire a **control that must appear**, or zero means nothing.
+13. **A control must fail on the broken version. Run it both ways.** A test that passes proves
+    nothing until you have watched it fail against the defect it exists to catch. Build the
+    fixture from something independent of the thing under test, and never let absence of output
+    stand as a result: confirm the code reached the part you are testing.
+14. **A guard validates an argument, not its meaning.** The name you checked resolves later,
+    against state something else can move in between. Bind the check and the use into one
+    operation, or the guard only proves you typed something plausible.
 
 **Reviewing code:** grep for `except.*:\s*pass`, `return True` inside an `except`, `|| true`,
 `2>/dev/null`, hardcoded `status="green"`, and `priority="low"`. Each is a question to answer,
 not automatically a bug. Fuller guidance on writing a new check, and on what to do after a silent
 failure bites, is in `hardening/cases.md`.
 
-### What we have to build this with
+### Choosing the tool to build this with
 
-**[[homelab-services.md]]** is the index: it holds the tool-versus-blind-spot table and points at
-`homelab/inventory.md` (the live list of topics, monitors, watchdogs, timers and containers,
-regenerated from the running stack, so trust it over memory) and `homelab/playbooks.md` (how to
-send an alert and how to write a liveness probe). This file holds the principles, which do not
-change when a container does.
+Most silent failures happen in the **gap between** these, not inside any one of them. The
+right-hand column is the point: every tool here is blind to something, and the blindness is
+what bites.
+
+| Question | Tool | Blind to |
+|---|---|---|
+| Is this URL still answering? | an uptime monitor | whether a cron ran, whether a gate fired, whether the answer is *correct* |
+| Did this code throw? | an error tracker | anything caught and swallowed, which is every bug on this page |
+| Did this unit crash? | systemd `OnFailure=` | a unit that is `active` while doing nothing |
+| Is this mechanism *actually working*? | **a liveness probe you write** | nothing, but you have to write it |
+| Tell me right now | a push-notification channel | it is the delivery channel, not a detector |
+
+The fourth row keeps being skipped and is the one that matters. Every other row is an outage
+somebody has actually had.

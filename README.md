@@ -39,7 +39,7 @@ overlap, so if you change one, check the other still agrees.
 | `mcp/peer-ack/` | The same ledger as an MCP server, so a session can record and acknowledge without shelling out. See [its README](mcp/peer-ack/README.md). |
 | `bin/apply-settings.sh` | Merges a policy into `~/.claude/settings.json`, reports drift per key, and reapplies itself from a `SessionStart` hook. |
 | `bin/check-setup.sh` | Machine-level preflight: stow links resolve, settings policy in force, commit identity not leaking a personal address. |
-| `claude-core/.claude/instructions/` | The rules themselves: five laws, twelve anti-silent-failure rules with their case studies, working style, session discipline, security. |
+| `claude-core/.claude/instructions/` | The rules themselves: five laws, fourteen anti-silent-failure rules with their case studies, working style, session discipline, security. |
 | `claude-commands/.claude/commands/` | Slash commands: `/session-end`, `/next-session`, `/nextlite`, `/new-repo`, `/setup-issues`. |
 | `claude-coding/.claude/skills/` | Skills for general coding work. |
 | `tests/` | 82 cases across all three guards, classified against the real hook contract. |
@@ -248,16 +248,16 @@ instruction:
 
 `claude-core/.claude/instructions/` is the part you can read in ten minutes and argue with.
 
-- **[five-laws.md](claude-core/.claude/instructions/five-laws.md)** — unknown is a valid
+- **[five-laws.md](claude-core/.claude/instructions/five-laws.md)**: unknown is a valid
   answer; verify and prove; push back or be complicit; declare confidence; structure over
   promises. Written to counteract a model's trained pull toward sounding confident and
   agreeable.
-- **[hardening.md](claude-core/.claude/instructions/hardening.md)** — twelve rules about
+- **[hardening.md](claude-core/.claude/instructions/hardening.md)**: fourteen rules about
   safety mechanisms that die quietly. Never renumber them; they are cited by number.
-- **[hardening/cases.md](claude-core/.claude/instructions/hardening/cases.md)** — the
+- **[hardening/cases.md](claude-core/.claude/instructions/hardening/cases.md)**: the
   outage behind each rule. A one-line rule is easy to misapply; the case is what makes it
   stick.
-- **[working-style.md](claude-core/.claude/instructions/working-style.md)** — branch and
+- **[working-style.md](claude-core/.claude/instructions/working-style.md)**: branch and
   PR discipline, conventional commits, never squash-merge, and the push rule the hook
   enforces.
 - **[session-discipline.md](claude-core/.claude/instructions/session-discipline.md)**,

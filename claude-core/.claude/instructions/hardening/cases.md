@@ -1,10 +1,11 @@
 # Hardening: the cases behind the rules
 
-Read on demand. `../hardening.md` holds the twelve rules as one-liners; this file holds the outage
+Read on demand. `../hardening.md` holds the fourteen rules as one-liners; this file holds the outage
 each one was bought with, plus the detail that only matters when you are actually writing or
 reviewing something.
 
-**Rule numbers are cited across ~60 source files in six repos. Never renumber.** If a rule is ever
+**Rule numbers are cited by number across dozens of source files in several repositories. Never
+renumber.** If a rule is ever
 retired, leave its number in place with a note, so old citations still resolve.
 
 ## Where this came from
@@ -130,6 +131,61 @@ read, because a skipped item is not an absent match.
   `queued unallowlisted` early on and `queued new` later, so counting either alone read as silence)
 - `git branch -r`, which serves **stale cached remote-tracking refs** until you `git fetch --prune`,
   so deleted branches appear to still exist (2026-08-10)
+
+## 13. A control must fail on the broken version. Run it both ways
+
+**2026-08-16, two sessions on one machine, six in a single day.** Each of these returned a
+clean-looking result while answering a question narrower than the one being asked. None was
+caught by a test. Every one was caught by using the thing and looking at what actually landed.
+
+| The check | The easier question it actually answered |
+|---|---|
+| screenshot of a dashboard, blank | what a **hidden** browser tab had bothered to paint |
+| merge behaviour of a settings policy | merging into an **empty** file, not a populated one |
+| grep for a claim in prose | whether one **literal substring** was present, not whether the fact was stated |
+| reproduce a crash by recording twice | whether two entries **happened** to share a second, which they did not |
+| test suite, 27 cases, green | only the paths already trusted; the broken function was never called |
+| sandbox check of a fixed checker | nothing: the tool **bailed before reaching the code under test** |
+
+The last one happened immediately after the peer session described the identical failure in its
+own first two attempts. The warning was read, understood, agreed with, and walked into anyway.
+What saved it was checking whether the output section had rendered at all before trusting the
+number in it.
+
+The first one cost a real regression: a feature was diagnosed as broken from an automated
+screenshot, removed, committed, and restored once the artefact was understood.
+
+**Two fixture smells, both seen the same day.** A selftest built its fixture from the same
+constant the pattern under test used, so both sides moved together and it passed while broken.
+And a test set's docstring claimed all ten cases were real samples when two had been written by
+the author, which is how a test set drifts into ratifying whatever the code already does.
+
+## 14. A guard validates an argument, not its meaning
+
+**2026-08-16.** The `git push` guard in this repository exists because a commit landed on a peer
+session's branch (rule: name the branch, never `HEAD`). That night it happened *again*, to a push
+that named its branch correctly. The checkout switched branches between two tool calls, so the
+correct name resolved to the wrong ref, and a docs commit landed on the peer's in-progress branch
+and was pushed there.
+
+The guard could not have caught it. It validates the *form* of the argument at call time; the
+argument's *referent* is decided later by a tree another session can move. Same family as reading
+a config value and acting on it three calls later.
+
+**Worktrees are the mitigation and are not sufficient.** The same night the peer used a worktree
+per edit for exactly this reason and was still caught, differently: worktree isolation stops the
+tree moving under you, but it does not stop you running a command from the wrong `cwd`. Twice,
+`git branch --show-current` returned the feature branch because the session was still `cd`'d into
+the worktree. The main-branch guard refused, correctly, but it caught a `cwd` mistake rather than
+the concurrency mistake it was written for. Right answer, wrong reason, which is a pass you have
+not actually earned.
+
+**Recovery pattern, if this bites again.** Never repair a shared checkout by checking out
+branches in it while a peer is working there. Cherry-pick into a throwaway worktree, restore the
+peer's remote ref with `--force-with-lease=<branch>:<exact-sha>` so a concurrent push aborts the
+operation instead of being clobbered, move the local branch with `git reset --keep` (which
+refuses rather than destroying uncommitted work), then tell the peer and let them verify it
+independently rather than taking your word.
 
 ---
 
