@@ -34,6 +34,9 @@ overlap, so if you change one, check the other still agrees.
 |---|---|
 | `bin/guard-git-push.sh` | `PreToolUse` hook. Refuses a `git push` that does not name its branch. |
 | `bin/guard-repo-collision.sh` | `PreToolUse` hook. Warns, once per session, when another Claude session is running in the same checkout. |
+| `bin/peer-ack.sh` | Ledger CLI. Tracks whether a message sent to another Claude session was ever acknowledged, because the send tool reports queued as sent. |
+| `bin/peer-ack-hook.sh` | `SessionStart` and `UserPromptSubmit` hook. Surfaces messages still waiting on an acknowledgement. Advisory; it never blocks. |
+| `mcp/peer-ack/` | The same ledger as an MCP server, so a session can record and acknowledge without shelling out. See [its README](mcp/peer-ack/README.md). |
 | `bin/apply-settings.sh` | Merges a policy into `~/.claude/settings.json`, reports drift per key, and reapplies itself from a `SessionStart` hook. |
 | `bin/check-setup.sh` | Machine-level preflight: stow links resolve, settings policy in force, commit identity not leaking a personal address. |
 | `claude-core/.claude/instructions/` | The rules themselves: five laws, twelve anti-silent-failure rules with their case studies, working style, session discipline, security. |
@@ -171,6 +174,46 @@ Its test suite states its own gap rather than hiding it: the peer-present path n
 second real Claude session in the same checkout, which CI cannot spawn, so that path is
 verified by hand and the expected output is printed in the suite for comparison.
 
+## The acknowledgement ledger
+
+The two guards above protect a repository. This one protects a claim: that a
+message you sent to another Claude session actually arrived.
+
+`SendMessage` returns `{"success": true}` when a message is **queued**, not when a
+peer receives it. A message can sit waiting for approval at the receiving
+terminal, expire unread, and leave the sender sincerely reporting it as
+delivered. From inside the sending session, queued and delivered are identical.
+
+So `bin/peer-ack.sh` keeps a ledger, `bin/peer-ack-hook.sh` surfaces anything
+still outstanding, and `mcp/peer-ack/server.py` exposes the same operations as
+MCP tools. The convention is three lines: a message that needs confirmation ends
+with `ACK-REQ <nonce>`, the receiver's first act is `ACK <nonce>`, and
+**unacknowledged means undelivered**.
+
+```bash
+bin/peer-ack.sh record <nonce> <to> "summary"   # after sending, if it matters
+bin/peer-ack.sh ack <nonce>                     # when the ack arrives
+bin/peer-ack.sh pending                         # what is still outstanding
+bin/peer-ack.sh selftest                        # controls, both directions
+```
+
+It deliberately implements **no transport**. The obvious fix to "messages get
+lost waiting for approval" is a private channel that just delivers, and that was
+rejected: the message was not lost to a flaw, it was held for a human's approval
+that never came. A channel that auto-delivered would have removed the gate. It
+stores no message bodies either, only whether each one was acknowledged. It is a
+receipt book, not a transcript, and it can tell you something was lost without
+being able to recover it.
+
+**[mcp/peer-ack/README.md](mcp/peer-ack/README.md) is the reference**: the MCP
+registration, the SDK version pin and why the fallback import must stay, the off
+switch, and why the hook's `; exit 0` wrapper is not decorative.
+
+The story behind this one:
+**[...Well ACKtually...](https://rod.lunt.au/notes/well-acktually/)**, in which
+two sessions built it while correcting each other, and reinvented most of a 1974
+paper doing it.
+
 ## The settings policy
 
 `~/.claude/settings.json` cannot live in a dotfiles repository, because Claude Code
@@ -239,11 +282,12 @@ instruction:
 ```sh
 tests/test-guard-git-push.sh                      # 25 cases
 tests/test-guard-repo-collision.sh                # 27 cases
+tests/test-peer-ack.sh                            # 30 cases
 shellcheck -S warning bin/*.sh tests/*.sh
 jq empty claude-core/settings-policy.json
 ```
 
-CI runs all of the above, plus a check that both guards are still executable, because a
+CI runs all of the above, plus a check that all four hook scripts are still executable, because a
 hook whose script has lost its exec bit fails in exactly the quiet way this repository is
 about.
 
