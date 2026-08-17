@@ -31,7 +31,7 @@ Do NOT propose the whole strategy upfront. Walk through the buckets in priority 
 - For each Close-without-code candidate: "#42 looks obsolete (idle 14 months, mentions a feature already shipped in `f3a01b2`). Close without a PR?"
 - For each Bundleable group: "#13, #18, #21 all touch the rate-limit middleware. Bundle into one PR?"
 - For each Needs-discussion: "#27 needs a scope call (mentions both `auth` and `audit-log`; unclear which is in scope). Defer it or talk through it now?"
-- For Trivial: skip the quiz — propose them in batch and ask "any to drop from this list?"
+- For Trivial: skip the quiz, propose them in batch and ask "any to drop from this list?"
 
 Skip categories the user already has a clear opinion on. The quiz is for the actual decision points, not a checklist. If the backlog is large (50+), open with: "Backlog has N open. Want to scope this session to a focused subset (the close-without-code and bundleable buckets), or full sweep?"
 
@@ -40,9 +40,9 @@ Skip categories the user already has a clear opinion on. The quiz is for the act
 Once buckets are agreed, present a one-screen plan:
 
 ```
-Closeable without code: #N1, #N2, #N3 — bulk close with `gh issue close --comment ...`
-Bundle A: #M1+#M2 (same files: app/middleware/*.py — sequential PR)
-Bundle B: #M3+#M4 (same files: app/templates/* — sequential PR)
+Closeable without code: #N1, #N2, #N3: bulk close with `gh issue close --comment ...`
+Bundle A: #M1+#M2 (same files: app/middleware/*.py, sequential PR)
+Bundle B: #M3+#M4 (same files: app/templates/*, sequential PR)
 Standalone: #S1, #S2, #S3 (sequential, one at a time)
 Defer to backlog: #D1, #D2 (label `backlog`, comment, move on)
 ```
@@ -75,7 +75,7 @@ Auto-link issues to PRs via PR body (`Closes #N1, closes #N2`) so merge auto-clo
 
 ### 5. Re-quiz between batches
 
-After each PR lands or each batch closes, ask: "Continue with the next bundle, or pause to review?" Long burndowns benefit from check-ins. Do NOT silently chew through 10 issues — the user wants to stay in the loop, not delegate the whole sweep.
+After each PR lands or each batch closes, ask: "Continue with the next bundle, or pause to review?" Long burndowns benefit from check-ins. Do NOT silently chew through 10 issues: the user wants to stay in the loop, not delegate the whole sweep.
 
 ## Output format per issue worked
 
@@ -91,7 +91,7 @@ For each issue, surface:
 - Never bulk-close without per-issue confirmation. Closing eats history; a wrong close erodes trust in the issue tracker.
 - Never label an issue obsolete based on title alone. Read the comments. Old "we'll fix it" promises hide in there.
 - Never run two agents on overlapping files. Use worktrees plus file allowlists, or go sequential.
-- If the backlog has 50+ open issues, propose a focused subset for the session. Do not try to clear everything in one pass — context dilution makes triage worse.
+- If the backlog has 50+ open issues, propose a focused subset for the session. Do not try to clear everything in one pass, because context dilution makes triage worse.
 - Stale labels lie. An issue tagged `priority:high` from 2023 may be cold; use updated_at + comment recency, not labels alone.
 
 ## When the right move is to NOT clear

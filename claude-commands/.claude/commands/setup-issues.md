@@ -114,7 +114,7 @@ If a label edit changes a colour the user picked deliberately, that is annoying.
 
 ## Step 2.5: Prune non-baseline labels (opt-in)
 
-Sync (Step 2) only adds and updates; it never deletes. So GitHub's stock defaults (`duplicate`, `wontfix`, `invalid`, `question`, `good first issue`, `help wanted`) linger alongside the baseline set as unused noise. This step offers to remove them. **Deleting a label also strips it from any issue that uses it** — safe on a fresh repo, potentially lossy on an established one, so it is always confirmed and defaults to the conservative option.
+Sync (Step 2) only adds and updates; it never deletes. So GitHub's stock defaults (`duplicate`, `wontfix`, `invalid`, `question`, `good first issue`, `help wanted`) linger alongside the baseline set as unused noise. This step offers to remove them. **Deleting a label also strips it from any issue that uses it**, safe on a fresh repo, potentially lossy on an established one, so it is always confirmed and defaults to the conservative option.
 
 Compute what is present but not in the baseline, and split it into "known stock defaults" vs "other" (labels the user likely added deliberately):
 
