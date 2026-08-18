@@ -2,17 +2,17 @@
 #
 # Test suite for bin/guard-repo-collision.sh.
 #
-# STATED GAP, because a test suite that hides what it cannot cover is the same
-# bug as a check that cannot fail: the "a peer session IS present" path needs a
-# second real Claude Code process running in the same checkout, which CI cannot
-# spawn. That path is verified by hand against a live peer, and the observed
-# output is recorded at the bottom of this file so a reader can see what it
-# should look like rather than taking it on trust.
-#
-# What IS covered here is everything deterministic: which git verbs the guard
-# reacts to, that it never blocks, that it stays silent with no peer, and that
-# it fails open rather than closed when it cannot run. Those are the parts most
+# This file covers everything deterministic: which git verbs the guard reacts
+# to, that it never blocks, that it stays silent with no peer, and that it
+# fails open rather than closed when it cannot run. Those are the parts most
 # likely to break under editing.
+#
+# The peer-present paths live in test-guard-repo-collision-peers.sh. This
+# header used to declare them a stated gap ("needs a second real Claude Code
+# process, which CI cannot spawn"); that turned out to be false. A copy of
+# bash renamed to `claude` gives /proc/<pid>/comm the right value, so a peer
+# can be simulated in CI, and the peers suite does, including the rule-13
+# cross-run proving its controls fail on the pre-fix script.
 #
 # Contract, same as the push guard:
 #   exit 2                  -> BLOCK  (this guard must NEVER do this)
@@ -33,10 +33,15 @@ command -v jq >/dev/null 2>&1 || { echo "these tests need jq" >&2; exit 1; }
 PASS=0
 FAIL=0
 
-# Each case gets a clean marker dir, or the once-per-session throttle would make
-# every test after the first one silent and they would all "pass" for the wrong
+# The guard keeps its markers and once-per-session throttle in a shared state
+# dir; point it at a scratch one so these tests neither touch live state nor
+# inherit it. Each case gets a clean dir, or the throttle would make every
+# test after the first one silent and they would all "pass" for the wrong
 # reason.
-reset_throttle() { rm -rf "${TMPDIR:-/tmp}/claude-repo-collision"; }
+CLAUDE_GUARD_STATE_DIR="$(mktemp -d)"
+export CLAUDE_GUARD_STATE_DIR
+trap 'rm -rf "${CLAUDE_GUARD_STATE_DIR}"' EXIT
+reset_throttle() { rm -rf "${CLAUDE_GUARD_STATE_DIR}"; }
 
 run() {
   local expect="$1" label="$2" cmd="$3" cwd="$4" out rc got
@@ -81,7 +86,7 @@ echo
 echo "Verb matching (the part most likely to break under editing)"
 # Tested directly against the guard's own matcher rather than through a peer, so
 # a regex edit that stops matching `git commit` fails here even with no peer.
-VERB_RE='(^|[;&|]|\s)git(\s+-[^[:space:]]+([[:space:]]+[^[:space:]]+)?)*\s+(commit|merge|rebase|push|checkout|switch|reset|cherry-pick|stash)(\s|$)'
+VERB_RE='(^|[;&|]|\s)git(\s+-[^[:space:]]+([[:space:]]+[^[:space:]]+)?)*\s+(commit|merge|rebase|push|pull|checkout|switch|reset|cherry-pick|revert|am|stash)(\s|$)'
 check_verb() {
   local expect="$1" cmd="$2"
   if printf '%s' "${cmd}" | grep -qE "${VERB_RE}"; then got=MATCH; else got=NOMATCH; fi
@@ -100,6 +105,9 @@ check_verb MATCH   "git switch main"
 check_verb MATCH   "git reset --hard"
 check_verb MATCH   "git cherry-pick abc123"
 check_verb MATCH   "git stash"
+check_verb MATCH   "git pull origin main"
+check_verb MATCH   "git revert HEAD"
+check_verb MATCH   "git am 0001-fix.patch"
 check_verb MATCH   "cd /tmp && git commit -m x"
 check_verb MATCH   "git -C /srv/x commit -m y"
 check_verb NOMATCH "git status"
@@ -128,14 +136,7 @@ echo
 echo "----------------------------------------"
 printf '  %d passed, %d failed\n' "${PASS}" "${FAIL}"
 echo
-echo "  NOT COVERED HERE: the peer-present path. It needs a second real Claude"
-echo "  Code session in the same checkout, which CI cannot spawn. Verified by"
-echo "  hand against a live peer; expected shape:"
-echo
-echo "    guard-repo-collision: another Claude Code session is running in this"
-echo "    same checkout."
-echo "      repo:   /path/to/repo"
-echo "      branch: main (right now, and it can change under you)"
-echo "      peers:  pid 237453"
+echo "  Peer-present paths (cwd scan, markers, pruning, warn-once) are covered"
+echo "  by tests/test-guard-repo-collision-peers.sh with simulated peers."
 echo
 [ "${FAIL}" -eq 0 ] || exit 1
