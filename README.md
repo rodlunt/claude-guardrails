@@ -66,7 +66,7 @@ Requires `bash`, `jq`, and [GNU Stow](https://www.gnu.org/software/stow/) if you
 instruction files symlinked rather than copied.
 
 ```sh
-git clone https://github.com/rodlunt/claude-guardrails ~/claude-guardrails
+git clone --branch v1.1.4 https://github.com/rodlunt/claude-guardrails ~/claude-guardrails
 cd ~/claude-guardrails
 
 # 1. Symlink the instruction files, commands and skills into ~/.claude
@@ -75,6 +75,10 @@ stow --target="$HOME" claude-core claude-commands claude-coding
 # 2. Merge the settings policy into this machine's live settings.json
 bash bin/apply-settings.sh
 ```
+
+Every command above is pinned to the current release tag, not `main`. `main` moves; a tag
+does not, so an install today and an install in six months pull the same thing unless you
+choose to move the pin yourself.
 
 That second step is what installs the hooks. `settings.json` is deliberately **not**
 stowed: Claude Code rewrites it at runtime, so a symlink into a repository would be
