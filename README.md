@@ -33,7 +33,7 @@ overlap, so if you change one, check the other still agrees.
 | Piece | What it does |
 |---|---|
 | `bin/guard-git-push.sh` | `PreToolUse` hook. Refuses a `git push` that does not name its branch. |
-| `bin/guard-repo-collision.sh` | `PreToolUse` hook. Warns, once per session, when another Claude session is running in the same checkout. |
+| `bin/guard-repo-collision.sh` | `PreToolUse` hook. Warns, once per session, when another Claude session is working in the same checkout. |
 | `bin/peer-ack.sh` | Ledger CLI. Tracks whether a message sent to another Claude session was ever acknowledged, because the send tool reports queued as sent. |
 | `bin/peer-ack-hook.sh` | `SessionStart` and `UserPromptSubmit` hook. Surfaces messages still waiting on an acknowledgement. Advisory; it never blocks. |
 | `mcp/peer-ack/` | The same ledger as an MCP server, so a session can record and acknowledge without shelling out. See [its README](mcp/peer-ack/README.md). |
@@ -66,7 +66,7 @@ Requires `bash`, `jq`, and [GNU Stow](https://www.gnu.org/software/stow/) if you
 instruction files symlinked rather than copied.
 
 ```sh
-git clone --branch v1.1.4 https://github.com/rodlunt/claude-guardrails ~/claude-guardrails
+git clone --branch v1.2.0 https://github.com/rodlunt/claude-guardrails ~/claude-guardrails
 cd ~/claude-guardrails
 
 # 1. Symlink the instruction files, commands and skills into ~/.claude
@@ -145,12 +145,12 @@ The push guard blocks the one command whose damage is hard to undo. It cannot te
 fact underneath: that somebody else is in the checkout with you. That is what
 `bin/guard-repo-collision.sh` is for.
 
-It fires only on git verbs that **write** (`commit`, `merge`, `rebase`, `push`, `checkout`,
-`switch`, `reset`, `cherry-pick`, `stash`), warns **once per session per repository**, and
-**never blocks**:
+It fires only on git verbs that **write** (`commit`, `merge`, `rebase`, `push`, `pull`,
+`checkout`, `switch`, `reset`, `cherry-pick`, `revert`, `am`, `stash`), warns **once per
+session per repository**, and **never blocks**:
 
 ```text
-guard-repo-collision: another Claude Code session is running in this same checkout.
+guard-repo-collision: another Claude Code session is working in this same checkout.
 
   repo:   /home/you/Projects/thing
   branch: main (right now, and it can change under you)
@@ -163,6 +163,20 @@ The branch can change between two of your tool calls. Do not read it once and re
   - If you are about to do sustained work, relaunching under --worktree avoids this entirely.
 ```
 
+Peers are detected on two channels. Any other `claude` process whose cwd resolves to the
+same checkout counts, and so does any live session that has run a git write there: on
+every write the hook records "this session works in this repo" in a shared state dir
+under `/tmp`, and markers whose process has exited are pruned in passing. The marker
+channel exists because the cwd channel alone was structurally blind, found 2026-08-18:
+a session that launches from `$HOME` and `cd`s inside its Bash commands keeps `$HOME` as
+its process cwd forever, so on machines where every session starts that way the guard
+was installed, registered, and could not ever fire. A guard that died quietly while
+looking healthy is the exact bug this repository exists to prevent, and this one shipped
+with it for a while. Deliberately out of scope: two *clones* of the same remote. Git's
+own non-fast-forward rejection arbitrates those, and warning on a shared remote would
+fire on every pair of worktrees, which is exactly the isolation the message above
+recommends.
+
 Three deliberate decisions:
 
 - **`PreToolUse`, not `SessionStart`.** A start-up check only sees peers that already exist.
@@ -174,9 +188,12 @@ Three deliberate decisions:
 - **It cannot call `SendMessage` itself.** Hooks are shell commands; `SendMessage` is a tool
   available to the model. So the hook supplies the fact and tells the model to use it.
 
-Its test suite states its own gap rather than hiding it: the peer-present path needs a
-second real Claude session in the same checkout, which CI cannot spawn, so that path is
-verified by hand and the expected output is printed in the suite for comparison.
+Its test suite used to state a gap: the peer-present path needs a second real Claude
+session, which CI cannot spawn. That turned out to be false. A copy of bash renamed to
+`claude` gives `/proc/<pid>/comm` the value the guard checks for, so
+`tests/test-guard-repo-collision-peers.sh` simulates peers in CI, covers both detection
+channels, and runs the control both ways: its expectations fail 6 checks against the
+pre-fix script, which is what proves they can fail at all.
 
 ## The acknowledgement ledger
 
@@ -285,7 +302,8 @@ instruction:
 
 ```sh
 tests/test-guard-git-push.sh                      # 25 cases
-tests/test-guard-repo-collision.sh                # 27 cases
+tests/test-guard-repo-collision.sh                # 30 cases
+tests/test-guard-repo-collision-peers.sh          # 12 checks, simulated peers
 tests/test-peer-ack.sh                            # 30 cases
 shellcheck -S warning bin/*.sh tests/*.sh
 jq empty claude-core/settings-policy.json

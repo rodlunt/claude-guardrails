@@ -42,6 +42,7 @@ jobs:
         run: |
           tests/test-guard-git-push.sh
           tests/test-guard-repo-collision.sh
+          tests/test-guard-repo-collision-peers.sh
           tests/test-peer-ack.sh
 
       - name: Python syntax (MCP server)
