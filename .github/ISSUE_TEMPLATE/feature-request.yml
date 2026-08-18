@@ -1,0 +1,40 @@
+name: Feature request
+description: A guard, check or rule this repo does not have yet
+labels: ["enhancement"]
+assignees: ["rodlunt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The bar for a new guard here is that it can tell "passed" from "could not run".
+        If the idea is an instruction rather than a mechanism, say why it cannot be a hook.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is missing
+      description: What you are trying to prevent or catch, and what currently lets it through.
+      placeholder: |
+        There is no check that a hook script still has its exec bit after a rename.
+        A hook that lost it fails silently: the harness just never calls it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: A guard, an addition to an existing check, or a change to the rules.
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: >
+        Two or three testable criteria that prove this is done. Done means these pass,
+        not "finished typing".
+      placeholder: |
+        - New guard has a test suite with a DENY case and an ALLOW case
+        - The test suite includes a fail-open control, not just the happy path
+        - CI runs the new test suite
+    validations:
+      required: true

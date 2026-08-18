@@ -6,6 +6,8 @@
 
 <!-- The problem it solves. If it is a guard, say what it failed to catch. -->
 
+Closes #
+
 ## How it was verified
 
 <!-- Show the command and its output, not a claim that it works.

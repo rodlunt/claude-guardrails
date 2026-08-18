@@ -37,3 +37,16 @@ body:
       label: Hook output, if any
       description: Anything the hook printed, including a "NOT ENFORCED" warning.
       render: text
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: >
+        Two or three testable criteria that prove this is fixed. Done means these pass,
+        not "the code looks right".
+      placeholder: |
+        - git push origin HEAD is denied again
+        - tests/test-guard-git-push.sh includes a case for this input
+        - shellcheck -S warning bin/*.sh is still clean
+    validations:
+      required: true
